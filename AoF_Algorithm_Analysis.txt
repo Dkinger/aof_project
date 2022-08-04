@@ -1,0 +1,54 @@
+# File for testing code before use in AoF Project
+# Source Dataset: https://archive.ics.uci.edu/ml/datasets/Breast+Cancer+Wisconsin+%28Diagnostic%29
+
+import pandas as pd
+import numpy as np
+from sklearn.datasets import load_breast_cancer
+from sklearn.preprocessing import StandardScaler
+from keras.models import Sequential, Model
+from keras.layers import Dense, Dropout, Input
+from tensorflow.keras.optimizers import SGD
+from sklearn.model_selection import StratifiedKFold
+from sklearn.model_selection import train_test_split, cross_validate
+# from sklearn.linear_model import LogisticRegression
+# from sklearn.neighbors import KNeighborsClassifier
+# from sklearn.tree import DecisionTreeClassifier
+
+# Determine what dataset to import
+
+# Using Sklearn processed dataset:
+dataset = load_breast_cancer()
+# Scale dataset to create multidimensional feature space X to cancer diagnosis array Y
+X = StandardScaler().fit_transform(dataset.data)
+Y = dataset.target
+print("\n***Dataset Description:\n"+dataset.DESCR)
+
+# Code for neural network from https://www.edureka.co/blog/artificial-intelligence-in-healthcare/#Hands-On
+model = Sequential()
+model.add(Dense(128, activation="relu", input_dim=np.shape(X)[1]))
+model.add(Dropout(0.25))
+model.add(Dense(32, activation='relu'))
+model.add(Dropout(0.25))
+model.add(Dense(32, activation='relu'))
+model.add(Dense(1, activation='sigmoid'))
+sgd = SGD(learning_rate=0.01, decay=1e-6, momentum=0.9, nesterov=True)
+model.compile(loss='binary_crossentropy', optimizer=sgd, metrics=['accuracy'])
+
+# Fit and test the model by randomly splitting it
+# 67% of the data for training and 33% of the data for validation
+model.fit(X, Y, batch_size=5, epochs=10, validation_split=.33)
+
+# Cross validation analysis
+# K fold cross validation (k=2)
+k = 2
+kfold = StratifiedKFold(n_splits=2, shuffle=True)
+cvscores = []
+for train, test in kfold.split(X, Y):
+    # Fit the model
+    model.fit(X[train], Y[train], epochs=10, batch_size=10, verbose=0)
+    # evaluate the model
+    scores = model.evaluate(X[test], Y[test], verbose=0)
+    # Print scores from each cross validation run
+    print("Cross Validation Accuracy Score:\n"+"%s: %.2f%%" % (model.metrics_names[1], scores[1]*100))
+    cvscores.append(scores[1] * 100)
+print("%d-fold cross validation accuracy - %.2f%% (+/- %.2f%%)" % (k, np.mean(cvscores), np.std(cvscores)))
